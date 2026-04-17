@@ -1,0 +1,108 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && (request.auth.token.email_verified == true || request.auth.token.email == "mateusantna@gmail.com");
+    }
+
+    function existing() { return resource.data; }
+    function incoming() { return request.resource.data; }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "ADMIN") ||
+        request.auth.token.email == "mateusantna@gmail.com"
+      );
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // 3. Entity Validations
+    function isValidUser(data) {
+      return data.keys().hasAll(['name', 'email', 'role']) &&
+             data.name is string && data.name.size() <= 100 &&
+             data.email is string && data.email.size() <= 100 &&
+             data.role in ['ADMIN', 'TECH'];
+    }
+
+    function isValidClient(data) {
+      return data.keys().hasAll(['name', 'phone']) &&
+             data.name is string && data.name.size() <= 100 &&
+             data.phone is string && data.phone.size() <= 20;
+    }
+
+    function isValidService(data) {
+      return data.keys().hasAll(['clientName', 'date', 'serviceType', 'value', 'status']) &&
+             data.clientName is string && data.clientName.size() <= 100 &&
+             data.date is string && 
+             data.serviceType is string && data.serviceType.size() <= 200 &&
+             data.value is number && data.value >= 0 &&
+             data.status in ['QUOTE', 'PENDING', 'WAITING_PARTS', 'FINISHED', 'CANCELED'];
+    }
+
+    function isValidTransaction(data) {
+      return data.keys().hasAll(['description', 'amount', 'type', 'date']) &&
+             data.description is string && data.description.size() <= 200 &&
+             data.amount is number && data.amount >= 0 &&
+             data.type in ['INCOME', 'EXPENSE'] &&
+             data.date is string;
+    }
+
+    // 4. Match Blocks
+
+    match /test/connection {
+      allow read: if true;
+    }
+
+    match /users/{userId} {
+      allow read: if isSignedIn() && (isOwner(userId) || isAdmin());
+      allow create: if (isOwner(userId) && request.auth.token.email == "mateusantna@gmail.com") || 
+                    (isAdmin() && isValidUser(incoming()));
+      allow update: if (isOwner(userId) || isAdmin()) && isValidUser(incoming()) && 
+                    incoming().diff(existing()).affectedKeys().hasOnly(['name', 'email', 'role', 'updatedAt']);
+      allow delete: if isAdmin() && !isOwner(userId);
+    }
+
+    match /clients/{clientId} {
+      allow read: if isSignedIn();
+      allow create: if isAdmin() && isValidClient(incoming());
+      allow update: if isAdmin() && isValidClient(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /services/{serviceId} {
+      allow get: if isSignedIn() && (isAdmin() || existing().techId == request.auth.uid);
+      allow list: if isSignedIn() && (isAdmin() || resource.data.techId == request.auth.uid);
+      allow create: if isAdmin() && isValidService(incoming());
+      allow update: if isSignedIn() && (
+        (isAdmin() && isValidService(incoming())) ||
+        (existing().techId == request.auth.uid && 
+         incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']) &&
+         isValidService(incoming()))
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /transactions/{transactionId} {
+      allow write, read: if isAdmin() && (request.method != 'create' || isValidTransaction(incoming()));
+    }
+
+    match /settings/company {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+  }
+}

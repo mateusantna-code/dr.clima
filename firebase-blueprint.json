@@ -1,0 +1,103 @@
+{
+  "entities": {
+    "User": {
+      "title": "Usuário do Sistema",
+      "description": "Dados de perfil e permissões de usuários (Admins e Técnicos)",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["ADMIN", "TECH"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "email", "role"]
+    },
+    "Client": {
+      "title": "Cliente",
+      "description": "Cadastro de clientes para prestação de serviços",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "address": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "phone"]
+    },
+    "Service": {
+      "title": "Serviço / Orçamento",
+      "description": "Agendamentos de serviços e orçamentos",
+      "type": "object",
+      "properties": {
+        "clientName": { "type": "string" },
+        "clientId": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "serviceType": { "type": "string" },
+        "value": { "type": "number" },
+        "phone": { "type": "string" },
+        "techId": { "type": "string" },
+        "status": { "type": "string", "enum": ["QUOTE", "PENDING", "WAITING_PARTS", "FINISHED", "CANCELED"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["clientName", "date", "serviceType", "value", "status"]
+    },
+    "Transaction": {
+      "title": "Transação Financeira",
+      "description": "Lançamentos de entradas e saídas no fluxo de caixa",
+      "type": "object",
+      "properties": {
+        "description": { "type": "string" },
+        "amount": { "type": "number" },
+        "type": { "type": "string", "enum": ["INCOME", "EXPENSE"] },
+        "date": { "type": "string", "format": "date" },
+        "serviceId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["description", "amount", "type", "date"]
+    },
+    "CompanySettings": {
+      "title": "Configurações da Empresa",
+      "description": "Dados da empresa e preferências do sistema",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "owner": { "type": "string" },
+        "document": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "notifications": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "daysAhead": { "type": "number" },
+            "soundEnabled": { "type": "boolean" }
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "Perfis de usuários"
+    },
+    "clients/{clientId}": {
+      "schema": "Client",
+      "description": "Banco de dados de clientes"
+    },
+    "services/{serviceId}": {
+      "schema": "Service",
+      "description": "Registro de serviços e orçamentos"
+    },
+    "transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "Movimentações financeiras"
+    },
+    "settings/company": {
+      "schema": "CompanySettings",
+      "description": "Configurações globais da empresa"
+    }
+  }
+}

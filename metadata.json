@@ -1,0 +1,6 @@
+{
+  "name": "DR CLIMA",
+  "description": "Sistema de gestão para serviços de climatização com autenticação e banco de dados em tempo real.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
